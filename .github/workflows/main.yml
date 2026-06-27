@@ -1,9 +1,7 @@
 name: Build U-Boot for F660 (128MB NAND)
 
 on:
-  push:
-    branches: [ "main" ]
-  workflow_dispatch:    # 支持手动点击运行
+  workflow_dispatch:
 
 jobs:
   build:
@@ -13,8 +11,9 @@ jobs:
     - name: Checkout source code
       uses: actions/checkout@v4
       with:
-        repository: msdos03/avanta-uboot-f660   # 指定作者的U-Boot仓库
+        repository: msdos03/avanta-uboot-f660
         ref: main
+        token: ${{ secrets.REPO_TOKEN }}
 
     - name: Install build tools
       run: |
@@ -27,14 +26,11 @@ jobs:
         tar -xf x86_64-gcc-12.3.0-nolibc-arm-linux-gnu.tar.xz
         echo "$PWD/gcc-12.3.0-nolibc/arm-linux-gnu/bin" >> $GITHUB_PATH
 
-    - name: Modify configuration for 128MB NAND (Critical)
+    - name: Modify configuration for 128MB NAND
       run: |
-        # 将 NAND 总容量从 32MB (0x2000000) 修改为 128MB (0x8000000)
         sed -i 's/\(CONFIG_SYS_NAND_SIZE\s*\)0x[0-9a-fA-F]*/\10x8000000/' include/configs/*.h
-        # 扩大 UBI 分区大小，让系统能使用全部剩余空间
         sed -i 's/\(MTDPARTS_DEFAULT.*\)0x1F00000/\10x1F00000/' include/configs/*.h || true
         echo "Config files modified:"
-        cat include/configs/zte_f660.h || cat include/configs/*.h
 
     - name: Build U-Boot
       run: |
@@ -43,7 +39,7 @@ jobs:
         make zte_f660_config
         make -j$(nproc)
 
-    - name: Upload compiled binary
+    - name: Upload binary
       uses: actions/upload-artifact@v4
       with:
         name: u-boot-f660-128m-nand
