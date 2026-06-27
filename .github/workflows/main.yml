@@ -15,26 +15,22 @@ jobs:
         ref: master
         token: ${{ secrets.REPO_TOKEN }}
 
-    - name: Install build tools
+    - name: Install ARM cross compiler
       run: |
         sudo apt-get update
-        sudo apt-get install -y build-essential libncurses-dev wget
-
-    - name: Setup ARM cross compiler
-      run: |
-        wget https://mirrors.edge.kernel.org/pub/tools/crosstool/files/bin/x86_64/12.3.0/x86_64-gcc-12.3.0-nolibc-arm-linux-gnu.tar.xz
-        tar -xf x86_64-gcc-12.3.0-nolibc-arm-linux-gnu.tar.xz
-        echo "$PWD/gcc-12.3.0-nolibc/arm-linux-gnu/bin" >> $GITHUB_PATH
+        sudo apt-get install -y gcc-arm-linux-gnueabi binutils-arm-linux-gnueabi
 
     - name: Modify configuration for 128MB NAND
       run: |
+        # 将 NAND 总容量从 32MB 改为 128MB (0x8000000)
         sed -i 's/\(CONFIG_SYS_NAND_SIZE\s*\)0x[0-9a-fA-F]*/\10x8000000/' include/configs/*.h
+        # 调整 UBI 分区大小（如果需要）
         sed -i 's/\(MTDPARTS_DEFAULT.*\)0x1F00000/\10x1F00000/' include/configs/*.h || true
-        echo "Config files modified:"
+        echo "Configuration modified for 128MB NAND"
 
     - name: Build U-Boot
       run: |
-        export CROSS_COMPILE=arm-linux-gnu-
+        export CROSS_COMPILE=arm-linux-gnueabi-
         make clean
         make zte_f660_config
         make -j$(nproc)
